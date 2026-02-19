@@ -20,6 +20,15 @@
         .reason-txt { color: #d32f2f; font-style: italic; }
         .verify-box { height: 20px; width: 20px; border: 2px solid #333; margin: auto; background: #fff; }
         .loading { text-align: center; padding: 40px; font-weight: bold; }
+        .dept-tag {
+            display:inline-block;
+            background:#000;
+            color:#fff;
+            padding:2px 6px;
+            font-size:9px;
+            border-radius:3px;
+            margin-top:3px;
+        }
         @media print{
             .controls, .loading{ display:none; }
             .container{ padding:0; box-shadow: none; width: 100%; }
@@ -46,7 +55,7 @@
         <thead>
         <tr>
             <th style="width:35px">S.No</th>
-            <th style="width:120px">Name / College</th>
+            <th style="width:160px">Name / College / Dept</th>
             <th style="width:130px">Contact Details</th>
             <th style="width:110px">UPI ID</th>
             <th style="width:130px">Reason</th>
@@ -94,17 +103,16 @@
             const mail = row.c[3]?.v || "N/A";
             const phone = row.c[4]?.v || "N/A";
             const college = row.c[7]?.v || "N/A";
+            const dept = row.c[8]?.v || "N/A";   // ✅ Department (Column I)
             const reason = row.c[12]?.v || "Review";
             const upi = row.c[13]?.v || "N/A";
 
             let validEvents = [];
 
-            // Check both slot columns
             [10, 11].forEach(idx => {
                 let val = row.c[idx]?.v;
                 if (val) {
                     let clean = val.toString().toUpperCase();
-                    // BLOCK: Any string containing "INTRESTED" or "INTERESTED"
                     if (!clean.includes("INTRESTED") && !clean.includes("INTERESTED") && clean.trim() !== "") {
                         validEvents.push(val.trim());
                     }
@@ -113,19 +121,31 @@
 
             validEvents.forEach(evt => {
                 if(!eventMap[evt]) eventMap[evt] = [];
-                eventMap[evt].push({ name, college, mail, phone, upi, reason });
+                eventMap[evt].push({ name, college, dept, mail, phone, upi, reason });
             });
         });
 
         let html = "";
         Object.keys(eventMap).sort().forEach(eventName => {
-            html += `<tr><td colspan="6" class="event-group-header">EVENT: ${eventName.toUpperCase()} (${eventMap[eventName].length})</td></tr>`;
+            html += `<tr>
+                        <td colspan="6" class="event-group-header">
+                            EVENT: ${eventName.toUpperCase()} (${eventMap[eventName].length})
+                        </td>
+                    </tr>`;
+
             eventMap[eventName].forEach((item, i) => {
                 totalIssues++;
                 html += `<tr>
                     <td style="text-align:center">${i + 1}</td>
-                    <td><strong>${item.name}</strong><br><small>${item.college}</small></td>
-                    <td>${item.mail}<br><strong>${item.phone}</strong></td>
+                    <td>
+                        <strong>${item.name}</strong><br>
+                        <small>${item.college}</small><br>
+                        <span class="dept-tag">${item.dept}</span>
+                    </td>
+                    <td>
+                        ${item.mail}<br>
+                        <strong>${item.phone}</strong>
+                    </td>
                     <td style="word-break:break-all">${item.upi}</td>
                     <td class="reason-txt">${item.reason}</td>
                     <td><div class="verify-box"></div></td>
@@ -136,6 +156,7 @@
         tbody.innerHTML = html || "<tr><td colspan='6' style='text-align:center'>No valid events found.</td></tr>";
         document.getElementById('count').textContent = `Total Issues: ${totalIssues}`;
     }
+
     fetchData();
 </script>
 </body>
