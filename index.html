@@ -1,157 +1,142 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ALGORHYTHM'26 – Attendance Sheet</title>
-
-  <style>
-    body{ margin:0; font-family:Arial, sans-serif; background:#f3f4f6; padding:20px; }
-    .container{ max-width:900px; margin:auto; background:white; padding:20px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-    .header{ text-align:center; margin-bottom:15px; border-bottom: 2px solid #000; padding-bottom: 10px; }
-    .header h1{ margin:0; font-size:24px; letter-spacing: 2px; }
-    .header p{ margin:4px 0 0; font-size:14px; font-weight: bold; color:#333; }
-
-    .controls{ display:flex; gap:10px; margin-bottom:15px; }
-    select, button{ padding:8px 12px; font-size:14px; border: 1px solid #ccc; }
-    button{ background:#111827; color:white; border:none; cursor:pointer; }
-
-    table{ width:100%; border-collapse:collapse; font-size:12px; }
-    th, td{ border:1px solid #000; padding:6px 8px; text-align:left; }
-    th{ background:#f3f4f6; }
-
-    .checkbox{ width:16px; height:16px; border:1px solid #000; margin:auto; }
-
-    /* SIGNATURE SECTION */
-    .final-footer {
-      margin-top: 30px;
-      padding-top: 20px;
-      display: flex;
-      justify-content: flex-end;
-      font-weight: bold;
-    }
-    .sig-line { border-top: 1px solid #000; width: 200px; text-align: center; margin-top: 40px; }
-
-    @media print{
-      body{ background:white; padding:0; }
-      .controls{ display:none; }
-      .container{ padding:0; box-shadow: none; }
-      @page{ size:A4 portrait; margin:15mm; }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ALGORHYTHM'26 – UPI Verification</title>
+    <style>
+        body{ margin:0; font-family: 'Segoe UI', sans-serif; background:#f3f4f6; padding:20px; }
+        .container{ max-width:1100px; margin:auto; background:white; padding:30px; box-shadow: 0 0 15px rgba(0,0,0,0.1); border-radius: 8px; }
+        .header{ text-align:center; margin-bottom:20px; border-bottom: 3px solid #000; padding-bottom: 15px; }
+        .header h1{ margin:0; font-size:28px; text-transform: uppercase; }
+        .header p{ margin:5px 0 0; font-size:16px; font-weight: bold; color:#d32f2f; }
+        .controls{ display:flex; justify-content: space-between; align-items: center; margin-bottom: 15px; background: #eee; padding: 10px; border-radius: 5px; }
+        .count-badge { background: #000; color: #fff; padding: 5px 12px; border-radius: 20px; font-size: 14px; }
+        button{ background:#d32f2f; color:white; border:none; padding:10px 20px; cursor:pointer; border-radius: 4px; font-weight: bold; }
+        table{ width:100%; border-collapse:collapse; font-size:11px; table-layout: fixed; }
+        th, td{ border:1px solid #000; padding:8px 5px; text-align:left; word-wrap: break-word; vertical-align: top; }
+        th{ background:#f2f2f2; text-transform: uppercase; font-size: 10px; }
+        .event-group-header { background: #333 !important; color: #fff !important; font-size: 12px; font-weight: bold; text-align: center; }
+        .reason-txt { color: #d32f2f; font-style: italic; }
+        .verify-box { height: 20px; width: 20px; border: 2px solid #333; margin: auto; background: #fff; }
+        .loading { text-align: center; padding: 40px; font-weight: bold; }
+        @media print{
+            .controls, .loading{ display:none; }
+            .container{ padding:0; box-shadow: none; width: 100%; }
+            .event-group-header { background: #eee !important; color: #000 !important; border-top: 3px solid #000; }
+        }
+    </style>
 </head>
 <body>
 
 <div class="container">
-  <div class="header">
-    <h1>ALGORHYTHM'26</h1>
-    <p id="eventTitle">Select an event to generate sheet</p>
-  </div>
+    <div class="header">
+        <h1>ALGORHYTHM'26</h1>
+        <p>EVENT-WISE UPI DISCREPANCY LIST</p>
+    </div>
 
-  <div class="controls">
-    <select id="eventSelect"><option value="">Loading Data...</option></select>
-    <button onclick="window.print()">Print Sheet</button>
-  </div>
+    <div id="loader" class="loading">Filtering Data...</div>
 
-  <div id="printArea"></div>
+    <div class="controls">
+        <div class="count-badge" id="count">Total Issues: 0</div>
+        <button onclick="window.print()">Print List</button>
+    </div>
+
+    <table>
+        <thead>
+        <tr>
+            <th style="width:35px">S.No</th>
+            <th style="width:120px">Name / College</th>
+            <th style="width:130px">Contact Details</th>
+            <th style="width:110px">UPI ID</th>
+            <th style="width:130px">Reason</th>
+            <th style="width:50px; text-align:center;">Status</th>
+        </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+    </table>
 </div>
 
 <script>
-  const SHEETS=[
-    {id:"1I5r5Zy69lSOB3-0_kjm94Twe20zfU_Xz3oLbmRmXe7A", name:"Form Responses 1"},
-    {id:"1QssSb2v6UH1XcNxaBYEBZmGDQKrqH78TtXdm5A8rTa0", name:"Form Responses 1"}
-  ];
+    const SHEETS = [
+        {id: "1I5r5Zy69lSOB3-0_kjm94Twe20zfU_Xz3oLbmRmXe7A", name: "wrong"},
+        {id: "1QssSb2v6UH1XcNxaBYEBZmGDQKrqH78TtXdm5A8rTa0", name: "wrong"}
+    ];
 
-  const IGNORE=["Not interested in Slot 1","Not interested in Slot 2","Not Interested",""];
-  let eventData={};
-
-  async function fetchData(){
-    try {
-      const rows = await Promise.all(
-              SHEETS.map(s =>
-                      fetch(`https://docs.google.com/spreadsheets/d/${s.id}/gviz/tq?sheet=${encodeURIComponent(s.name)}&t=${Date.now()}`)
-                              .then(r => r.text())
-                              .then(t => JSON.parse(t.match(/setResponse\(([\s\S]+)\);/)[1]).table.rows)
-              )
-      );
-      processRows(rows.flat());
-    } catch (e) {
-      document.getElementById('eventTitle').textContent = "Error loading data. Check Sheet Privacy.";
-    }
-  }
-
-  function processRows(rows){
-    eventData={};
-    rows.forEach(row=>{
-      const name=row.c[2]?.v||"";
-      const email=row.c[3]?.v||"";
-      const phone=row.c[4]?.v||"";
-      const college=row.c[7]?.v||"";
-
-      [row.c[10]?.v, row.c[11]?.v].forEach(ev=>{
-        if(ev && !IGNORE.includes(ev)){
-          const obj={name, email, phone, college, event:ev};
-          (eventData[ev] ||= []).push(obj);
+    async function fetchData(){
+        try {
+            const allData = await Promise.all(
+                SHEETS.map(s =>
+                    fetch(`https://docs.google.com/spreadsheets/d/${s.id}/gviz/tq?sheet=${encodeURIComponent(s.name)}&t=${Date.now()}`)
+                        .then(r => r.text())
+                        .then(t => {
+                            const match = t.match(/setResponse\(([\s\S]+)\);/);
+                            return match ? JSON.parse(match[1]).table.rows : [];
+                        })
+                )
+            );
+            render(allData.flat());
+            document.getElementById('loader').style.display = 'none';
+        } catch (e) {
+            document.getElementById('loader').textContent = "Error loading data.";
         }
-      });
-    });
-    populateEvents();
-  }
+    }
 
-  function populateEvents(){
-    const select = document.getElementById('eventSelect');
-    select.innerHTML='<option value="">Select Event</option>';
-    Object.keys(eventData).sort().forEach(e=>{
-      select.add(new Option(`${e} (${eventData[e].length})`, e));
-    });
-  }
+    function render(rows){
+        const tbody = document.getElementById('tableBody');
+        let eventMap = {};
+        let totalIssues = 0;
 
-  document.getElementById('eventSelect').onchange = function() {
-    const ev = this.value;
-    if(!ev) { document.getElementById('printArea').innerHTML=""; return; }
-    document.getElementById('eventTitle').textContent = ev.toUpperCase() + " – ATTENDANCE SHEET";
-    renderSheet(eventData[ev]);
-  };
+        rows.forEach(row => {
+            if(!row.c || !row.c[2]) return;
 
-  function renderSheet(data){
-    let html = `
-      <table>
-        <thead>
-          <tr>
-            <th style="width:30px">S.No</th>
-            <th>Name</th>
-            <th>College</th>
-            <th>Phone Number</th>
-            <th style="width:60px">Present</th>
-          </tr>
-        </thead>
-        <tbody>`;
+            const name = row.c[2]?.v || "N/A";
+            const mail = row.c[3]?.v || "N/A";
+            const phone = row.c[4]?.v || "N/A";
+            const college = row.c[7]?.v || "N/A";
+            const reason = row.c[12]?.v || "Review";
+            const upi = row.c[13]?.v || "N/A";
 
-    data.forEach((s, i) => {
-      html += `
-        <tr>
-          <td>${i + 1}</td>
-          <td>${s.name}</td>
-          <td>${s.college}</td>
-          <td>${s.phone}</td>
-          <td><div class="checkbox"></div></td>
-        </tr>`;
-    });
+            let validEvents = [];
 
-    html += `</tbody></table>`;
+            // Check both slot columns
+            [10, 11].forEach(idx => {
+                let val = row.c[idx]?.v;
+                if (val) {
+                    let clean = val.toString().toUpperCase();
+                    // BLOCK: Any string containing "INTRESTED" or "INTERESTED"
+                    if (!clean.includes("INTRESTED") && !clean.includes("INTERESTED") && clean.trim() !== "") {
+                        validEvents.push(val.trim());
+                    }
+                }
+            });
 
-    // ADD COORDINATOR SIGNATURE ONLY ONCE AT THE END
-    html += `
-      <div class="final-footer">
-        <div>
-          <div class="sig-line">Coordinator Signature</div>
-        </div>
-      </div>`;
+            validEvents.forEach(evt => {
+                if(!eventMap[evt]) eventMap[evt] = [];
+                eventMap[evt].push({ name, college, mail, phone, upi, reason });
+            });
+        });
 
-    document.getElementById('printArea').innerHTML = html;
-  }
+        let html = "";
+        Object.keys(eventMap).sort().forEach(eventName => {
+            html += `<tr><td colspan="6" class="event-group-header">EVENT: ${eventName.toUpperCase()} (${eventMap[eventName].length})</td></tr>`;
+            eventMap[eventName].forEach((item, i) => {
+                totalIssues++;
+                html += `<tr>
+                    <td style="text-align:center">${i + 1}</td>
+                    <td><strong>${item.name}</strong><br><small>${item.college}</small></td>
+                    <td>${item.mail}<br><strong>${item.phone}</strong></td>
+                    <td style="word-break:break-all">${item.upi}</td>
+                    <td class="reason-txt">${item.reason}</td>
+                    <td><div class="verify-box"></div></td>
+                </tr>`;
+            });
+        });
 
-  fetchData();
+        tbody.innerHTML = html || "<tr><td colspan='6' style='text-align:center'>No valid events found.</td></tr>";
+        document.getElementById('count').textContent = `Total Issues: ${totalIssues}`;
+    }
+    fetchData();
 </script>
 </body>
 </html>
