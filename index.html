@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ALGORHYTHM'26 Participant List</title>
+<title>ALGORHYTHM'26 Participants</title>
 
 <style>
 :root{
@@ -26,7 +26,7 @@ body{
 }
 
 .container{
-    max-width:1200px;
+    max-width:1400px;
     margin:auto;
 }
 
@@ -42,6 +42,8 @@ body{
     justify-content:space-between;
     align-items:center;
     margin-bottom:20px;
+    flex-wrap:wrap;
+    gap:10px;
 }
 
 h2{
@@ -91,9 +93,15 @@ tbody tr:hover{
 }
 
 #syncStatus{
-    margin-top:15px;
+    margin-top:5px;
     color:#6b7280;
     font-size:12px;
+}
+
+.total{
+    margin-top:10px;
+    font-weight:bold;
+    color:#2563eb;
 }
 </style>
 </head>
@@ -101,13 +109,16 @@ tbody tr:hover{
 <body>
 
 <div class="container">
-
     <div class="card">
 
         <div class="header">
             <div>
-                <h2>ALGORHYTHM'26 Participants</h2>
-                <p id="syncStatus">Loading...</p>
+                <h2>ALGORHYTHM'26 Participant List</h2>
+                <div id="syncStatus">Loading data...</div>
+                <div class="total">
+                    Total Participants:
+                    <span id="totalParticipants">0</span>
+                </div>
             </div>
 
             <button onclick="downloadExcel()">
@@ -121,41 +132,43 @@ tbody tr:hover{
                 <tr>
                     <th>S.No</th>
                     <th>Name</th>
+                    <th>Year</th>
                     <th>College</th>
                     <th>Mail-id</th>
                 </tr>
                 </thead>
 
-                <tbody id="tableBody">
-                </tbody>
+                <tbody id="tableBody"></tbody>
             </table>
         </div>
 
     </div>
-
 </div>
 
 <script>
 
-/* GOOGLE SHEETS */
+// ================= GOOGLE SHEETS =================
+
 const SHEETS = [
 {
-id:"1I5r5Zy69lSOB3-0_kjm94Twe20zfU_Xz3oLbmRmXe7A",
-name:"Form Responses 1"
+    id:"1I5r5Zy69lSOB3-0_kjm94Twe20zfU_Xz3oLbmRmXe7A",
+    name:"Form Responses 1"
 },
 {
-id:"1QssSb2v6UH1XcNxaBYEBZmGDQKrqH78TtXdm5A8rTa0",
-name:"Form Responses 1"
+    id:"1QssSb2v6UH1XcNxaBYEBZmGDQKrqH78TtXdm5A8rTa0",
+    name:"Form Responses 1"
 }
 ];
 
-let participants=[];
+let participants = [];
+
+// ================= FETCH DATA =================
 
 async function fetchData(){
 
     try{
 
-        let allRows=[];
+        let allRows = [];
 
         for(const sheet of SHEETS){
 
@@ -163,6 +176,7 @@ async function fetchData(){
             `https://docs.google.com/spreadsheets/d/${sheet.id}/gviz/tq?sheet=${encodeURIComponent(sheet.name)}&t=${Date.now()}`;
 
             const response = await fetch(url);
+
             const text = await response.text();
 
             const json = JSON.parse(
@@ -175,7 +189,7 @@ async function fetchData(){
         processData(allRows);
 
         document.getElementById("syncStatus").innerText =
-        `Last Sync : ${new Date().toLocaleString()}`;
+        "Last Synced : " + new Date().toLocaleString();
 
     }
     catch(error){
@@ -183,15 +197,17 @@ async function fetchData(){
         console.error(error);
 
         document.getElementById("syncStatus").innerText =
-        "Failed to load data";
+        "Unable to fetch data";
     }
 }
+
+// ================= PROCESS DATA =================
 
 function processData(rows){
 
     const uniqueUsers = new Map();
 
-    rows.forEach(row=>{
+    rows.forEach(row => {
 
         const name =
             row.c?.[2]?.v || "";
@@ -205,22 +221,33 @@ function processData(rows){
         const college =
             row.c?.[7]?.v || "";
 
+        // CHANGE INDEX IF YEAR COLUMN IS DIFFERENT
+        const year =
+            row.c?.[8]?.v || "";
+
         if(!email) return;
 
         if(!uniqueUsers.has(email)){
 
             uniqueUsers.set(email,{
                 name,
+                year,
                 college,
                 email
             });
         }
+
     });
 
-    participants=[...uniqueUsers.values()];
+    participants = [...uniqueUsers.values()];
+
+    document.getElementById("totalParticipants").innerText =
+    participants.length;
 
     renderTable();
 }
+
+// ================= RENDER TABLE =================
 
 function renderTable(){
 
@@ -231,8 +258,9 @@ function renderTable(){
     participants.map((p,index)=>`
 
         <tr>
-            <td>${index+1}</td>
+            <td>${index + 1}</td>
             <td>${p.name}</td>
+            <td>${p.year}</td>
             <td>${p.college}</td>
             <td>${p.email}</td>
         </tr>
@@ -240,35 +268,45 @@ function renderTable(){
     `).join("");
 }
 
-/* DOWNLOAD CSV / EXCEL */
+// ================= DOWNLOAD EXCEL =================
+
 function downloadExcel(){
 
     let csv =
-    "S.No,Name,College,Mail-id\n";
+    "S.No,Name,Year,College,Mail-id\n";
 
     participants.forEach((p,index)=>{
 
         csv +=
-        `${index+1},"${p.name}","${p.college}","${p.email}"\n`;
+        `${index + 1},"${p.name}","${p.year}","${p.college}","${p.email}"\n`;
+
     });
 
     const blob =
-    new Blob([csv],{type:"text/csv"});
+    new Blob([csv],{
+        type:"text/csv;charset=utf-8;"
+    });
 
-    const url =
-    window.URL.createObjectURL(blob);
-
-    const a =
+    const link =
     document.createElement("a");
 
-    a.href = url;
-    a.download =
+    const url =
+    URL.createObjectURL(blob);
+
+    link.href = url;
+    link.download =
     "Algorhythm_Participants.csv";
 
-    a.click();
+    document.body.appendChild(link);
 
-    window.URL.revokeObjectURL(url);
+    link.click();
+
+    document.body.removeChild(link);
+
+    URL.revokeObjectURL(url);
 }
+
+// ================= START =================
 
 fetchData();
 
